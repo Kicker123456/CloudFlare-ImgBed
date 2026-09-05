@@ -186,6 +186,9 @@ async function telegramR2MirrorCache(context) {
         return context.next();
     }
 
+    let downstreamStarted = false;
+    let downstreamResponse = null;
+
     try {
         const securityConfig = await fetchSecurityConfig(env);
         const accessContext = buildPublicAccessContext(context, securityConfig, url);
@@ -239,16 +242,30 @@ async function telegramR2MirrorCache(context) {
         }
 
         // R2 已被生命周期规则清理或尚未预热：回退 Telegram，并重新填充边缘缓存/R2。
-        const telegramResponse = await context.next();
-        if (telegramResponse.ok && telegramResponse.status === 200) {
-            if (cache && cacheKey) {
-                cacheResponse(context, cache, cacheKey, telegramResponse);
+        downstreamStarted = true;
+        downstreamResponse = await context.next();
+
+        if (downstreamResponse.ok && downstreamResponse.status === 200) {
+            try {
+                if (cache && cacheKey) {
+                    cacheResponse(context, cache, cacheKey, downstreamResponse);
+                }
+                warmR2FromTelegram(context, fileId, imgRecord, downstreamResponse);
+            } catch (cacheError) {
+                console.warn('Telegram response cache warm failed:', cacheError.message);
             }
-            warmR2FromTelegram(context, fileId, imgRecord, telegramResponse);
         }
 
-        return telegramResponse;
+        return downstreamResponse;
     } catch (error) {
+        // 已进入原处理器后不能再次调用 next()；否则 Pages Functions 会重复执行下游链路。
+        if (downstreamStarted) {
+            if (downstreamResponse) {
+                return downstreamResponse;
+            }
+            throw error;
+        }
+
         // 缓存层任何异常都不能影响原图床可用性。
         console.warn('Telegram R2 mirror middleware fallback:', error.message);
         return context.next();
