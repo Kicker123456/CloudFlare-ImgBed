@@ -1,6 +1,7 @@
 import { checkDatabaseConfig } from '../utils/middleware';
 import { fetchSecurityConfig } from '../utils/sysConfig';
 import { getDatabase } from '../utils/databaseAdapter.js';
+import { requireSharePassword } from '../utils/shareAccess.js';
 import {
     FILE_CACHE_CONTROL,
     handleHeadRequest,
@@ -272,4 +273,4 @@ async function telegramR2MirrorCache(context) {
     }
 }
 
-export const onRequest = [checkDatabaseConfig, telegramR2MirrorCache];
+export const onRequest = [checkDatabaseConfig, requireSharePassword, telegramR2MirrorCache];
