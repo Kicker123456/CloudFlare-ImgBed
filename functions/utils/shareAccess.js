@@ -23,7 +23,7 @@ function passwordPage(request, error = '', status = 401) {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
         'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'no-referrer',
+        'Referrer-Policy': 'same-origin',
     } }));
 }
 
